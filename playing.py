@@ -3,10 +3,11 @@ Once a model is learned, use this to play it.
 """
 
 from game import main
+import pygame
 import numpy as np
 from nn import neural_net
 
-NUM_SENSORS = 3
+NUM_SENSORS = 9
 
 
 def play(model):
@@ -16,9 +17,9 @@ def play(model):
 
     # Do nothing to get initial.
     _, state = game_state.frame_step((2))
-
+    exit = False
     # Move.
-    while True:
+    while not exit:
         car_distance += 1
 
         # Choose action.
@@ -31,8 +32,13 @@ def play(model):
         if car_distance % 1000 == 0:
             print("Current distance: %d frames." % car_distance)
 
+        # Event queue
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                exit = True
+
 
 if __name__ == "__main__":
-    saved_model = 'saved-models/128-128-64-50000-50000.h5'
-    model = neural_net(NUM_SENSORS, [128, 128], saved_model)
+    saved_model = 'saved-models/32-32-40-50000-100000.h5'
+    model = neural_net(NUM_SENSORS, [32, 32], saved_model)
     play(model)

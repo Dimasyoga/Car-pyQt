@@ -1,8 +1,10 @@
 import random
 import math
 import numpy as np
+import sys
 
 import pygame
+from pygame.locals import *
 from pygame.color import THECOLORS
 
 import pymunk
@@ -15,6 +17,7 @@ height = 700
 pygame.init()
 screen = pygame.display.set_mode((width, height))
 clock = pygame.time.Clock()
+pygame.event.get()
 
 # Turn off alpha since we don't use it.
 screen.set_alpha(None)
@@ -26,6 +29,7 @@ draw_screen = True
 
 class GameState:
     def __init__(self):
+
         # Global-ish.
         self.crashed = False
 
@@ -69,7 +73,10 @@ class GameState:
         self.obstacles.append(self.create_obstacle(600, 600, 35))
 
         # Create a cat.
-        self.create_cat()
+        self.cat = []
+        self.cat.append(self.create_cat(300, 400))
+        self.cat.append(self.create_cat(400, 300))
+        self.cat.append(self.create_cat(150, 150))
 
     def create_obstacle(self, x, y, r):
         c_body = pymunk.Body(10, 10, pymunk.Body.STATIC)
@@ -80,16 +87,17 @@ class GameState:
         self.space.add(c_body, c_shape)
         return c_body
 
-    def create_cat(self):
+    def create_cat(self, x, y):
         inertia = pymunk.moment_for_circle(1, 0, 14, (0, 0))
-        self.cat_body = pymunk.Body(1, inertia)
-        self.cat_body.position = 50, height - 100
-        self.cat_shape = pymunk.Circle(self.cat_body, 30)
-        self.cat_shape.color = THECOLORS["orange"]
-        self.cat_shape.elasticity = 1.0
-        self.cat_shape.angle = 0.5
-        direction = Vec2d(1, 0).rotated(self.cat_body.angle)
-        self.space.add(self.cat_body, self.cat_shape)
+        cat_body = pymunk.Body(1, inertia)
+        cat_body.position = x, y
+        cat_shape = pymunk.Circle(cat_body, 30)
+        cat_shape.color = THECOLORS["orange"]
+        cat_shape.elasticity = 1.0
+        cat_shape.angle = 0.5
+        direction = Vec2d(1, 0).rotated(cat_body.angle)
+        self.space.add(cat_body, cat_shape)
+        return cat_body
 
     def create_car(self, x, y, r):
         inertia = pymunk.moment_for_circle(1, 0, 14, (0, 0))
@@ -159,10 +167,11 @@ class GameState:
             obstacle.velocity = speed * direction
 
     def move_cat(self):
-        speed = random.randint(20, 200)
-        self.cat_body.angle -= random.randint(-1, 1)
-        direction = Vec2d(1, 0).rotated(self.cat_body.angle)
-        self.cat_body.velocity = speed * direction
+        for cat in self.cat:
+            speed = random.randint(20, 200)
+            cat.angle -= random.randint(-1, 1)
+            direction = Vec2d(1, 0).rotated(cat.angle)
+            cat.velocity = speed * direction
 
     def car_is_crashed(self, readings):
         if readings[0] == 1 or readings[1] == 1 or readings[2] == 1:
@@ -209,12 +218,24 @@ class GameState:
         """
         # Make our arms.
         arm_left = self.make_sonar_arm(x, y)
+        arm_middle_left_0 = arm_left
+        arm_middle_left_1 = arm_left
+        arm_middle_left_2 = arm_left
         arm_middle = arm_left
+        arm_middle_right_2 = arm_left
+        arm_middle_right_1 = arm_left
+        arm_middle_right_0 = arm_left
         arm_right = arm_left
 
         # Rotate them and get readings.
         readings.append(self.get_arm_distance(arm_left, x, y, angle, 0.75))
+        readings.append(self.get_arm_distance(arm_middle_left_0, x, y, angle, 0.5))
+        readings.append(self.get_arm_distance(arm_middle_left_1, x, y, angle, 0.25))
+        readings.append(self.get_arm_distance(arm_middle_left_2, x, y, angle, 0.15))
         readings.append(self.get_arm_distance(arm_middle, x, y, angle, 0))
+        readings.append(self.get_arm_distance(arm_middle_right_2, x, y, angle, -0.15))
+        readings.append(self.get_arm_distance(arm_middle_right_1, x, y, angle, -0.25))
+        readings.append(self.get_arm_distance(arm_middle_right_0, x, y, angle, -0.5))
         readings.append(self.get_arm_distance(arm_right, x, y, angle, -0.75))
 
         if show_sensors:
@@ -280,12 +301,13 @@ class GameState:
 
 if __name__ == "__main__":
     game_state = GameState()
-    exit = False
-    while not exit:
+    while True:
         game_state.frame_step((random.randint(0, 2)))
-        # Event queue
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                exit = True
+            if event.type == QUIT:
+                sys.exit(0)
+            elif event.type == KEYDOWN and event.key == K_ESCAPE:
+                sys.exit(0)
+
 
     pygame.quit()

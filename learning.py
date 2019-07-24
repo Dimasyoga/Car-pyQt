@@ -1,4 +1,5 @@
 from game import main
+import pygame
 import numpy as np
 import random
 import csv
@@ -6,7 +7,7 @@ from nn import neural_net, LossHistory
 import os.path
 import timeit
 
-NUM_INPUT = 3
+NUM_INPUT = 9
 GAMMA = 0.9  # Forgetting.
 TUNING = False  # If False, just use arbitrary, pre-selected params.
 
@@ -39,8 +40,10 @@ def train_net(model, params):
     # Let's time it.
     start_time = timeit.default_timer()
 
+    exit = False
+
     # Run the frames.
-    while t < train_frames:
+    while (t < train_frames) and (not exit):
 
         t += 1
         car_distance += 1
@@ -115,6 +118,11 @@ def train_net(model, params):
                                overwrite=True)
             print("Saving model %s - %d" % (filename, t))
 
+        # Event queue
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                exit = True
+
     # Log results after we're done all frames.
     log_results(filename, data_collect, loss_log)
 
@@ -140,10 +148,10 @@ def process_minibatch2(minibatch, model):
 
     mb_len = len(minibatch)
 
-    old_states = np.zeros(shape=(mb_len, 3))
+    old_states = np.zeros(shape=(mb_len, NUM_INPUT))
     actions = np.zeros(shape=(mb_len,))
     rewards = np.zeros(shape=(mb_len,))
-    new_states = np.zeros(shape=(mb_len, 3))
+    new_states = np.zeros(shape=(mb_len, NUM_INPUT))
 
     for i, m in enumerate(minibatch):
         old_state_m, action_m, reward_m, new_state_m = m
@@ -182,7 +190,7 @@ def process_minibatch(minibatch, model):
         newQ = model.predict(new_state_m, batch_size=1)
         # Get our predicted best move.
         maxQ = np.max(newQ)
-        y = np.zeros((1, 3))
+        y = np.zeros((1, NUM_INPUT))
         y[:] = old_qval[:]
         # Check for terminal state.
         if reward_m != -500:  # non-terminal state
@@ -192,7 +200,7 @@ def process_minibatch(minibatch, model):
         # Update the value for the action we took.
         y[0][action_m] = update
         X_train.append(old_state_m.reshape(NUM_INPUT,))
-        y_train.append(y.reshape(3,))
+        y_train.append(y.reshape(NUM_INPUT,))
 
     X_train = np.array(X_train)
     y_train = np.array(y_train)
@@ -224,8 +232,7 @@ def launch_learn(params):
 if __name__ == "__main__":
     if TUNING:
         param_list = []
-        nn_params = [[164, 150], [256, 256],
-                     [512, 512], [1000, 1000]]
+        nn_params = [[32, 32], [64, 64], [128, 128], [164, 150], [256, 256]]
         batchSizes = [40, 100, 400]
         buffers = [10000, 50000]
 

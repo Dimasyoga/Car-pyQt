@@ -1,4 +1,4 @@
-from game import main
+from game import main_v2
 import pygame
 import numpy as np
 import random
@@ -8,6 +8,7 @@ import os.path
 import timeit
 
 NUM_INPUT = 17
+NUM_ACTION = 4
 GAMMA = 0.9  # Forgetting.
 TUNING = False  # If False, just use arbitrary, pre-selected params.
 
@@ -32,7 +33,7 @@ def train_net(model, params):
     loss_log = []
 
     # Create a new game instance.
-    game_state = main.GameState()
+    game_state = main_v2.GameState()
 
     # Get initial state by doing nothing and getting the state.
     _, state = game_state.frame_step((2))
@@ -50,7 +51,7 @@ def train_net(model, params):
 
         # Choose an action.
         if random.random() < epsilon or t < observe:
-            action = np.random.randint(0, 3)  # random
+            action = np.random.randint(0, NUM_ACTION)  # random
         else:
             # Get Q values for each action.
             qval = model.predict(state, batch_size=1)
@@ -79,7 +80,7 @@ def train_net(model, params):
             history = LossHistory()
             model.fit(
                 X_train, y_train, batch_size=batchSize,
-                nb_epoch=1, verbose=1, callbacks=[history]
+                nb_epoch=1, verbose=0, callbacks=[history]
             )
             loss_log.append(history.losses)
 
@@ -164,6 +165,7 @@ def process_minibatch2(minibatch, model):
     new_qvals = model.predict(new_states, batch_size=mb_len)
 
     maxQs = np.max(new_qvals, axis=1)
+
     y = old_qvals
     non_term_inds = np.where(rewards != -500)[0]
     term_inds = np.where(rewards == -500)[0]
@@ -223,7 +225,7 @@ def launch_learn(params):
         open('results/sonar-frames/loss_data-' + filename + '.csv', 'a').close()
         print("Starting test.")
         # Train.
-        model = neural_net(NUM_INPUT, params['nn'])
+        model = neural_net(NUM_ACTION, NUM_INPUT, params['nn'])
         train_net(model, params)
     else:
         print("Already tested.")
@@ -250,11 +252,11 @@ if __name__ == "__main__":
             launch_learn(param_set)
 
     else:
-        nn_param = [32, 32]
+        nn_param = [640, 640]
         params = {
-            "batchSize": 1000,
+            "batchSize": 400,
             "buffer": 50000,
             "nn": nn_param
         }
-        model = neural_net(NUM_INPUT, nn_param)
+        model = neural_net(NUM_ACTION, NUM_INPUT, nn_param)
         train_net(model, params)

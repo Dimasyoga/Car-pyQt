@@ -2,18 +2,19 @@
 Once a model is learned, use this to play it.
 """
 
-from game import main
+from game import main_v2
 import pygame
 import numpy as np
 from nn import neural_net
 
 NUM_SENSORS = 17
+NUM_ACTION = 4
 
 
 def play(model):
 
     car_distance = 0
-    game_state = main.GameState()
+    game_state = main_v2.GameState()
 
     # Do nothing to get initial.
     _, state = game_state.frame_step((2))
@@ -24,6 +25,7 @@ def play(model):
 
         # Choose action.
         action = (np.argmax(model.predict(state, batch_size=1)))
+        print(action)
 
         # Take action.
         _, state = game_state.frame_step(action)
@@ -39,6 +41,6 @@ def play(model):
 
 
 if __name__ == "__main__":
-    saved_model = 'saved-models/320-320-1000-50000-100000.h5'
-    model = neural_net(NUM_SENSORS, [320, 320], saved_model)
+    saved_model = 'saved-models/400-360-400-50000-50000.h5'
+    model = neural_net(NUM_ACTION, NUM_SENSORS, [400, 360], saved_model)
     play(model)

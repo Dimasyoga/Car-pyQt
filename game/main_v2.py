@@ -36,6 +36,7 @@ class GameState:
         # Physics stuff.
         self.space = pymunk.Space()
         self.space.gravity = pymunk.Vec2d(0., 0.)
+        self.space.damping = 0.8
 
         # Create the car.
         self.create_car(100, 100, 0.5)
@@ -89,7 +90,7 @@ class GameState:
 
     def create_cat(self, x, y):
         inertia = pymunk.moment_for_circle(1, 0, 14, (0, 0))
-        cat_body = pymunk.Body(1, inertia)
+        cat_body = pymunk.Body(30, inertia)
         cat_body.position = x, y
         cat_shape = pymunk.Circle(cat_body, 30)
         cat_shape.color = THECOLORS["orange"]
@@ -101,7 +102,7 @@ class GameState:
 
     def create_car(self, x, y, r):
         inertia = pymunk.moment_for_circle(1, 0, 14, (0, 0))
-        self.car_body = pymunk.Body(10.0, inertia)
+        self.car_body = pymunk.Body(50.0, inertia)
         self.car_body.position = x, y
         self.car_shape = pymunk.Circle(self.car_body, 25)
         self.car_shape.color = THECOLORS["green"]
@@ -116,6 +117,10 @@ class GameState:
             self.car_body.angle -= .2
         elif action == 1:  # Turn right.
             self.car_body.angle += .2
+        elif action == 2:
+            impulse = 200 * Vec2d(1,0)
+            impulse.rotate(self.car_body.angle)
+            self.car_body.apply_impulse_at_world_point(impulse, self.car_body.position)
 
         # Move obstacles.
         if self.num_steps % 100 == 0:
@@ -126,7 +131,7 @@ class GameState:
             self.move_cat()
 
         driving_direction = Vec2d(1, 0).rotated(self.car_body.angle)
-        self.car_body.velocity = 100 * driving_direction
+        #self.car_body.velocity = 100 * driving_direction
 
         # Update the screen and stuff.
         screen.fill(THECOLORS["black"])
@@ -153,8 +158,8 @@ class GameState:
             reward = -500
             self.recover_from_crash(driving_direction)
         else:
-            # Higher readings are better, so return the sum.
-            reward = -5 + int(self.sum_readings(readings) / 10)
+            reward = -100 + int(Vec2d.get_length(self.car_body.velocity))
+
         self.num_steps += 1
 
         return reward, state
@@ -168,29 +173,32 @@ class GameState:
 
     def move_cat(self):
         for cat in self.cat:
-            speed = random.randint(20, 200)
             cat.angle -= random.randint(-1, 1)
             direction = Vec2d(1, 0).rotated(cat.angle)
-            cat.velocity = speed * direction
+            impulse = 500 * Vec2d(1,0)
+            impulse.rotate(cat.angle)
+            cat.apply_impulse_at_world_point(impulse, cat.position)
+            
 
     def car_is_crashed(self, readings):
-        if readings[0] == 1 or readings[1] == 1 or readings[2] == 1:
-            return True
-        else:
-            return False
+        crash = False
+        for i in range(17):
+            if readings[i] == 1:
+                crash = True
+                break
+
+        return crash
 
     def recover_from_crash(self, driving_direction):
         """
         We hit something, so recover.
         """
         while self.crashed:
-            # Go backwards.
-            self.car_body.velocity = -100 * driving_direction
+            self.car_body.position = 100, 100
             self.crashed = False
+            
             for i in range(10):
-                self.car_body.angle += .2  # Turn a little.
-                screen.fill(THECOLORS["grey7"])  # Red is scary!
-                #draw(screen, self.space)
+                screen.fill(THECOLORS["red"])  # Red is scary!
 
                 options = pymunk.pygame_util.DrawOptions(screen)
                 self.space.debug_draw(options)
@@ -318,7 +326,7 @@ class GameState:
 if __name__ == "__main__":
     game_state = GameState()
     while True:
-        game_state.frame_step((random.randint(0, 2)))
+        game_state.frame_step((random.randint(0, 3)))
         for event in pygame.event.get():
             if event.type == QUIT:
                 sys.exit(0)

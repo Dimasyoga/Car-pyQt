@@ -18,7 +18,7 @@ class LossHistory(Callback):
         self.losses.append(logs.get('loss'))
 
 
-def neural_net(num_sensors, params, load=''):
+def neural_net(num_action, num_sensors, params, load=''):
     model = Sequential()
 
     # First layer.
@@ -34,7 +34,7 @@ def neural_net(num_sensors, params, load=''):
     model.add(Dropout(0.2))
 
     # Output layer.
-    model.add(Dense(3, init='lecun_uniform'))
+    model.add(Dense(num_action, init='lecun_uniform'))
     model.add(Activation('linear'))
 
     rms = RMSprop()

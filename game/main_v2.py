@@ -23,7 +23,7 @@ pygame.event.get()
 screen.set_alpha(None)
 
 # Showing sensors and redrawing slows things down.
-show_sensors = True
+show_sensors = False
 draw_screen = True
 
 
@@ -39,10 +39,12 @@ class GameState:
         self.space.damping = 0.8
 
         # Create the car.
-        self.create_car(100, 100, 0.5)
+        self.create_car(400, 400, 0)
 
         # Record steps.
         self.num_steps = 0
+
+        self.live_steps = 0
 
         # Create walls.
         static = [
@@ -147,18 +149,20 @@ class GameState:
 
         # Get the current location and the readings there.
         x, y = self.car_body.position
-        readings = self.get_sonar_readings(x, y, self.car_body.angle)
-        normalized_readings = [(x-20.0)/20.0 for x in readings] 
+        readings = self.get_sonar_readings(x, y, self.car_body.angle, int(Vec2d.get_length(self.car_body.velocity)))
+        normalized_readings = [(x-10.0)/10.0 for x in readings] 
         state = np.array([normalized_readings])
 
         # Set the reward.
         # Car crashed when any reading == 1
         if self.car_is_crashed(readings):
             self.crashed = True
+            self.live_steps = self.num_steps
             reward = -500
             self.recover_from_crash(driving_direction)
         else:
-            reward = -100 + int(Vec2d.get_length(self.car_body.velocity))
+            reward = -30 + int(Vec2d.get_length(self.car_body.velocity))
+            reward += self.num_steps - self.live_steps
 
         self.num_steps += 1
 
@@ -182,11 +186,21 @@ class GameState:
 
     def car_is_crashed(self, readings):
         crash = False
-        for i in range(17):
+        for i in range(13):
             if readings[i] == 1:
-                crash = True
-                break
-
+                if i == 0:
+                    if readings[i+1] < 10:
+                        crash = True
+                        break
+                elif i == 12:
+                    if readings[i-1] < 10:
+                        crash = True
+                        break
+                else:
+                    if readings[i+1] < 10 and readings[i-1] < 10:
+                        crash = True
+                        break
+                
         return crash
 
     def recover_from_crash(self, driving_direction):
@@ -194,7 +208,8 @@ class GameState:
         We hit something, so recover.
         """
         while self.crashed:
-            self.car_body.position = 100, 100
+            self.car_body.position = 400, 400
+            self.car_body.angle = 0
             self.crashed = False
             
             for i in range(10):
@@ -215,7 +230,7 @@ class GameState:
             tot += i
         return tot
 
-    def get_sonar_readings(self, x, y, angle):
+    def get_sonar_readings(self, x, y, angle, velocity):
         readings = []
         """
         Instead of using a grid of boolean(ish) sensors, sonar readings
@@ -231,11 +246,7 @@ class GameState:
         arm_middle_left_2 = arm_left
         arm_middle_left_3 = arm_left
         arm_middle_left_4 = arm_left
-        arm_middle_left_5 = arm_left
-        arm_middle_left_6 = arm_left
         arm_middle = arm_left
-        arm_middle_right_6 = arm_left
-        arm_middle_right_5 = arm_left
         arm_middle_right_4 = arm_left
         arm_middle_right_3 = arm_left
         arm_middle_right_2 = arm_left
@@ -244,23 +255,20 @@ class GameState:
         arm_right = arm_left
 
         # Rotate them and get readings.
-        readings.append(self.get_arm_distance(arm_left, x, y, angle, 1.8))
+        readings.append(self.get_arm_distance(arm_left, x, y, angle, 1.7))
         readings.append(self.get_arm_distance(arm_middle_left_0, x, y, angle, 1.5))
         readings.append(self.get_arm_distance(arm_middle_left_1, x, y, angle, 1.2))
         readings.append(self.get_arm_distance(arm_middle_left_2, x, y, angle, 0.9))
-        readings.append(self.get_arm_distance(arm_middle_left_3, x, y, angle, 0.7))
-        readings.append(self.get_arm_distance(arm_middle_left_4, x, y, angle, 0.5))
-        readings.append(self.get_arm_distance(arm_middle_left_5, x, y, angle, 0.3))
-        readings.append(self.get_arm_distance(arm_middle_left_6, x, y, angle, 0.15))
+        readings.append(self.get_arm_distance(arm_middle_left_3, x, y, angle, 0.6))
+        readings.append(self.get_arm_distance(arm_middle_left_4, x, y, angle, 0.3))
         readings.append(self.get_arm_distance(arm_middle, x, y, angle, 0))
-        readings.append(self.get_arm_distance(arm_middle_right_6, x, y, angle, -0.15))
-        readings.append(self.get_arm_distance(arm_middle_right_5, x, y, angle, -0.3))
-        readings.append(self.get_arm_distance(arm_middle_right_4, x, y, angle, -0.5))
-        readings.append(self.get_arm_distance(arm_middle_right_3, x, y, angle, -0.7))
+        readings.append(self.get_arm_distance(arm_middle_right_4, x, y, angle, -0.3))
+        readings.append(self.get_arm_distance(arm_middle_right_3, x, y, angle, -0.6))
         readings.append(self.get_arm_distance(arm_middle_right_2, x, y, angle, -0.9))
         readings.append(self.get_arm_distance(arm_middle_right_1, x, y, angle, -1.2))
         readings.append(self.get_arm_distance(arm_middle_right_0, x, y, angle, -1.5))
-        readings.append(self.get_arm_distance(arm_right, x, y, angle, -1.8))
+        readings.append(self.get_arm_distance(arm_right, x, y, angle, -1.7))
+        readings.append((1.0 / 1.0 + math.exp(-velocity / 30)) * 10)
 
         if show_sensors:
             pygame.display.update()
@@ -302,7 +310,7 @@ class GameState:
         arm_points = []
         # Make an arm. We build it flat because we'll rotate it about the
         # center later.
-        for i in range(1, 40):
+        for i in range(1, 20):
             arm_points.append((distance + x + (spread * i), y))
 
         return arm_points
@@ -326,7 +334,7 @@ class GameState:
 if __name__ == "__main__":
     game_state = GameState()
     while True:
-        game_state.frame_step((random.randint(0, 3)))
+        game_state.frame_step((random.randint(0, 4)))
         for event in pygame.event.get():
             if event.type == QUIT:
                 sys.exit(0)

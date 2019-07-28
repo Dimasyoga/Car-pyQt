@@ -33,7 +33,11 @@ def neural_net(num_action, num_sensors, params, load=''):
     model.add(Activation('relu'))
     model.add(Dropout(0.2))
     
-
+    # Third layer.
+    model.add(Dense(params[2], init='lecun_uniform'))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.2))
+    
     # Output layer.
     model.add(Dense(num_action, init='lecun_uniform'))
     model.add(Activation('linear'))

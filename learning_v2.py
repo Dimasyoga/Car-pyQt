@@ -3,11 +3,11 @@ import pygame
 import numpy as np
 import random
 import csv
-from nn import neural_net, LossHistory
+from nn_v2 import neural_net, LossHistory
 import os.path
 import timeit
 
-NUM_INPUT = 17
+NUM_INPUT = 14
 NUM_ACTION = 4
 GAMMA = 0.9  # Forgetting.
 TUNING = False  # If False, just use arbitrary, pre-selected params.
@@ -19,7 +19,7 @@ def train_net(model, params):
 
     observe = 1000  # Number of frames to observe before training.
     epsilon = 1
-    train_frames = 100000  # Number of frames to play.
+    train_frames = 500000  # Number of frames to play.
     batchSize = params['batchSize']
     buffer = params['buffer']
 
@@ -211,7 +211,7 @@ def process_minibatch(minibatch, model):
 
 
 def params_to_filename(params):
-    return str(params['nn'][0]) + '-' + str(params['nn'][1]) + '-' + \
+    return str(params['nn'][0]) + '-' + str(params['nn'][1]) + '-' + str(params['nn'][2]) + '-' + \
             str(params['batchSize']) + '-' + str(params['buffer'])
 
 
@@ -234,7 +234,7 @@ def launch_learn(params):
 if __name__ == "__main__":
     if TUNING:
         param_list = []
-        nn_params = [[32, 32], [64, 64], [128, 128], [164, 150], [256, 256]]
+        nn_params = [[32, 32, 32], [64, 64, 64], [128, 128, 128], [164, 164, 150], [256, 256, 256]]
         batchSizes = [40, 100, 400]
         buffers = [10000, 50000]
 
@@ -252,9 +252,9 @@ if __name__ == "__main__":
             launch_learn(param_set)
 
     else:
-        nn_param = [640, 640]
+        nn_param = [128, 128, 64]
         params = {
-            "batchSize": 400,
+            "batchSize": 64,
             "buffer": 50000,
             "nn": nn_param
         }

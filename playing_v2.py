@@ -5,9 +5,9 @@ Once a model is learned, use this to play it.
 from game import main_v2
 import pygame
 import numpy as np
-from nn import neural_net
+from nn_v2 import neural_net
 
-NUM_SENSORS = 17
+NUM_SENSORS = 14
 NUM_ACTION = 4
 
 
@@ -41,6 +41,6 @@ def play(model):
 
 
 if __name__ == "__main__":
-    saved_model = 'saved-models/400-360-400-50000-50000.h5'
-    model = neural_net(NUM_ACTION, NUM_SENSORS, [400, 360], saved_model)
+    saved_model = 'saved-models/128-128-64-64-50000-50000.h5'
+    model = neural_net(NUM_ACTION, NUM_SENSORS, [128, 128, 64], saved_model)
     play(model)
